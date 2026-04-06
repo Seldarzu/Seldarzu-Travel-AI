@@ -1,52 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse';
+import React, { useState } from 'react';
 import LandingGlobe from './components/LandingGlobe';
 import MapExplorer from './components/MapExplorer';
 
 function App() {
   const [appState, setAppState] = useState('landing'); // 'landing' or 'exploring'
   const [placesData, setPlacesData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [targetLocation, setTargetLocation] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [currentCity, setCurrentCity] = useState('');
 
-  useEffect(() => {
-    // Fetch and parse the CSV data
-    const loadPlaces = async () => {
-      try {
-        const response = await fetch('/data.csv');
-        const csvText = await response.text();
+  const handleStartExploration = async (city) => {
+    setScanning(true);
+    setCurrentCity(city);
+    
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_BASE}/api/explore`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ city })
+      });
+      
+      const data = await response.json();
+      
+      if (data && data.places && data.places.length > 0) {
+        // Sort by final_score descending
+        const validData = data.places
+          .filter(item => item.latitude && item.longitude)
+          .sort((a, b) => (b.final_score || 0) - (a.final_score || 0));
+        setPlacesData(validData);
+        setScanning(false);
+        setTargetLocation({ lat: validData[0].latitude, lng: validData[0].longitude });
         
-        Papa.parse(csvText, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            // Sort by final_score descending
-            const validData = results.data
-              .filter(item => item.latitude && item.longitude)
-              .sort((a, b) => (b.final_score || 0) - (a.final_score || 0));
-            setPlacesData(validData);
-            setLoading(false);
-          },
-          error: (error) => {
-            console.error("Error parsing CSV:", error);
-            setLoading(false);
+        setTimeout(() => {
+          setAppState('exploring');
+        }, 1500);
+      } else {
+        console.warn("No places found from API or error occurred. We could fallback to mock data here if needed.");
+        setPlacesData([]);
+        setScanning(false);
+        setAppState('exploring');
+      }
+    } catch (err) {
+      console.error("Failed to load live places data:", err);
+      alert("Ağ hatası veya sunucuya ulaşılamadı. Lütfen backend'in çalıştığından emin olun.");
+      setScanning(false);
+      setAppState('exploring');
+    }
+  };
+
+  const handleDeepScan = async (radarCenter) => {
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_BASE}/api/explore-radius`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ lat: radarCenter.lat, lng: radarCenter.lng, city: currentCity || 'Bölge' })
+      });
+      const data = await response.json();
+      
+      const newPlaces = data.places || [];
+      
+      setPlacesData(prevPlaces => {
+        const _places = [...prevPlaces];
+        let addedCount = 0;
+        newPlaces.forEach(np => {
+          if (!_places.find(p => p.name === np.name)) {
+            _places.push({ ...np, isNewNode: true });
+            addedCount++;
           }
         });
-      } catch (err) {
-        console.error("Failed to load places data:", err);
-        setLoading(false);
-      }
-    };
-
-    loadPlaces();
-  }, []);
-
-  const handleStartExploration = () => {
-    setAppState('exploring');
+        
+        setTimeout(() => alert(`Radar Taraması Tamamlandı! Seçilen alan etrafında ${addedCount} yeni elit mekan bulundu ve ana listeye eklendi.`), 500);
+        return _places;
+      });
+      
+    } catch (err) {
+      console.error(err);
+      alert("Radar taraması sırasında hata oluştu. Lütfen bağlantınızı kontrol edin.");
+    }
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--bg-color)' }}>
+    <div className="app-wrapper">
       {/* Container for crossfading between states */}
       
       {/* Map Explorer Layer - Initially hidden or beneath */}
@@ -61,7 +101,7 @@ function App() {
         transition: 'opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: 1
       }}>
-        {appState === 'exploring' && <MapExplorer places={placesData} />}
+        {appState === 'exploring' && <MapExplorer places={placesData} onDeepScan={handleDeepScan} />}
       </div>
 
       {/* Landing Layer - Initially visible */}
@@ -78,8 +118,8 @@ function App() {
       }}>
         <LandingGlobe 
           onExplore={handleStartExploration} 
-          loading={loading}
-          placesCount={placesData.length}
+          scanning={scanning}
+          targetLocation={targetLocation}
         />
       </div>
     </div>
