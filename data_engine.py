@@ -1,7 +1,7 @@
 # data_engine.py - FINAL VERSION
 import pandas as pd
 import requests
-from config import MAY_BONUS, WEIGHTS
+from settings import MAY_BONUS, WEIGHTS
 
 class AmericaTravelEngine:
     def __init__(self):

@@ -1,6 +1,6 @@
 # main.py
 from data_engine import AmericaTravelEngine
-from config import SERP_API_KEY, SEARCH_QUERIES
+from settings import SERP_API_KEY, SEARCH_QUERIES
 
 def run_travel_analytics():
     """

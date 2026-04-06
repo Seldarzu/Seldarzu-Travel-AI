@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import math
 
 from data_engine import AmericaTravelEngine
-from config import SERP_API_KEY, get_search_queries
+from settings import SERP_API_KEY, get_search_queries
 
 app = FastAPI()
 

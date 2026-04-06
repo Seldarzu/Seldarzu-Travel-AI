@@ -67,7 +67,7 @@ if sync_btn:
 if sync_btn:
     with st.spinner("Google Maps'ten güncel veriler çekiliyor..."):
         from data_engine import AmericaTravelEngine
-        from config import SERP_API_KEY, SEARCH_QUERIES
+        from settings import SERP_API_KEY, SEARCH_QUERIES
         
         new_engine = AmericaTravelEngine()
         for query in SEARCH_QUERIES:
