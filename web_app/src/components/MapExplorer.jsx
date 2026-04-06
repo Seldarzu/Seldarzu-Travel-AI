@@ -399,16 +399,20 @@ const MapExplorer = ({ places, onDeepScan }) => {
             <div 
               key={idx}
               className="glass-card"
-              style={{ position: 'relative', padding: '16px', cursor: 'pointer', transition: '0.2s', border: popupInfo?.name === place.name ? '1px solid #3b82f6' : ''} }
+              style={{ position: 'relative', padding: '16px', cursor: 'pointer', transition: '0.2s', border: popupInfo?.name === place.name ? '1px solid #3b82f6' : (place.isNewNode ? '1px solid rgba(16, 185, 129, 0.5)' : '')} }
               onClick={() => onPlaceClick(place)}
             >
               <div 
-                style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 5 }}
-                onClick={(e) => { e.stopPropagation(); toggleFavorite(place); }}
+                style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 5, display: 'flex', gap: '8px', alignItems: 'center' }}
               >
-                  <Heart size={20} color="#ec4899" fill={favorites.find(f => f.name === place.name) ? "#ec4899" : "transparent"} strokeWidth={2} style={{ transition: '0.2s' }} />
+                  {place.isNewNode && (
+                    <span style={{ fontSize: '0.65rem', backgroundColor: '#10b981', color: '#fff', padding: '2px 6px', borderRadius: '10px', fontWeight: 'bold' }}>YENİ</span>
+                  )}
+                  <div onClick={(e) => { e.stopPropagation(); toggleFavorite(place); }}>
+                    <Heart size={20} color="#ec4899" fill={favorites.find(f => f.name === place.name) ? "#ec4899" : "transparent"} strokeWidth={2} style={{ transition: '0.2s' }} />
+                  </div>
               </div>
-              <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px', paddingRight: '24px' }}>{place.name}</h3>
+              <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '8px', paddingRight: place.isNewNode ? '60px' : '24px' }}>{place.name}</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#fbbf24' }}>
                   <Star size={14} fill="#fbbf24" /> {place.google_rating} ({place.review_count})
@@ -560,13 +564,34 @@ const MapExplorer = ({ places, onDeepScan }) => {
               anchor="bottom"
             >
               <div
-                style={{ cursor: 'pointer', touchAction: 'none' }}
+                style={{ cursor: 'pointer', touchAction: 'none', position: 'relative' }}
                 onClick={(e) => {
                   e.stopPropagation();
                   onPlaceClick(place);
                 }}
               >
-                <MapPin size={32} color={popupInfo?.name === place.name ? "#ef4444" : "#9ca3af"} fill={popupInfo?.name === place.name ? "#7f1d1d" : "#4b5563"} style={{ cursor: 'pointer', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))', transition: 'all 0.3s' }} />
+                {/* Glow/Pulse effect for new radar scans */}
+                {place.isNewNode && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10b981',
+                    opacity: 0.4,
+                    animation: 'pulse 2s infinite',
+                    zIndex: -1
+                  }} />
+                )}
+                <MapPin 
+                  size={32} 
+                  color={popupInfo?.name === place.name ? "#ef4444" : (place.isNewNode ? "#10b981" : "#9ca3af")} 
+                  fill={popupInfo?.name === place.name ? "#7f1d1d" : (place.isNewNode ? "#065f46" : "#4b5563")} 
+                  style={{ cursor: 'pointer', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))', transition: 'all 0.3s' }} 
+                />
               </div>
             </Marker>
           ))}

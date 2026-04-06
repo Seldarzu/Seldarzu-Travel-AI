@@ -5,3 +5,6 @@ folium
 streamlit
 streamlit-folium
 scikit-learn
+fastapi
+uvicorn
+pydantic

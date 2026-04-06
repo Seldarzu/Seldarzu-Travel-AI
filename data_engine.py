@@ -8,11 +8,11 @@ class AmericaTravelEngine:
         self.columns = [
             'name', 'category', 'google_rating', 'review_count', 
             'price_level', 'is_local_favorite', 'may_suitability',
-            'latitude', 'longitude'
+            'latitude', 'longitude', 'thumbnail'
         ]
         self.data = pd.DataFrame(columns=self.columns)
 
-    def add_place(self, name, cat, rating, reviews, price, lat, lng, local=False):
+    def add_place(self, name, cat, rating, reviews, price, lat, lng, thumbnail, local=False):
         may_score = 0
         cat_str = str(cat).lower()
         for key, bonus in MAY_BONUS.items():
@@ -24,13 +24,15 @@ class AmericaTravelEngine:
             'name': name, 'category': cat, 'google_rating': rating,
             'review_count': reviews, 'price_level': price,
             'is_local_favorite': local, 'may_suitability': may_score,
-            'latitude': lat, 'longitude': lng
+            'latitude': lat, 'longitude': lng, 'thumbnail': thumbnail
         }
         self.data = pd.concat([self.data, pd.DataFrame([new_row])], ignore_index=True)
 
-    def fetch_from_google(self, query, api_key):
+    def fetch_from_google(self, query, api_key, ll=None):
         url = "https://serpapi.com/search.json"
         params = {"engine": "google_maps", "q": query, "type": "search", "api_key": api_key}
+        if ll:
+            params["ll"] = ll
         try:
             response = requests.get(url, params=params)
             results = response.json().get("local_results", [])
@@ -42,6 +44,7 @@ class AmericaTravelEngine:
                         place.get("title"), place.get("type", "General"),
                         place.get("rating", 0), place.get("reviews", 0),
                         len(place.get("price", "$")), lat, lng,
+                        place.get("thumbnail", ""),
                         local=(place.get("reviews", 0) < 5000 and place.get("rating", 0) >= 4.6)
                     )
             return True

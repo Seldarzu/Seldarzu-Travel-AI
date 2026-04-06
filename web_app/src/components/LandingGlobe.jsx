@@ -126,6 +126,7 @@ const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
           </div>
 
           <button
+            className="landing-btn"
             onClick={handleStart}
             disabled={scanning}
             style={{

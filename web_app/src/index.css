@@ -227,6 +227,12 @@ h1, h2, h3 {
   
   .sidebar-header p {
     margin-bottom: 8px !important;
+    font-size: 0.8rem;
+  }
+
+  /* Prevent iOS zoom */
+  input, select, textarea {
+    font-size: 16px !important;
   }
 
   .location-controls-group {
@@ -239,7 +245,7 @@ h1, h2, h3 {
   }
   
   .sidebar-scrollable-content {
-    padding: 12px 16px;
+    padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
     gap: 8px !important;
   }
   
@@ -254,12 +260,25 @@ h1, h2, h3 {
 
   .responsive-glass-card {
     padding: 24px;
-    width: 90%;
-    max-width: 350px;
+    width: 92%;
+    max-width: 360px;
+    border-radius: 20px;
   }
   
   .responsive-title {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
+  }
+
+  .landing-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Map Controls scaled down on mobile */
+  .maplibregl-ctrl-group {
+    margin-bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+    transform: scale(0.85);
+    transform-origin: bottom right;
   }
 }
 

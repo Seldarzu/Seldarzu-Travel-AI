@@ -14,7 +14,8 @@ function App() {
     setCurrentCity(city);
     
     try {
-      const response = await fetch('/api/explore', {
+      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_BASE}/api/explore`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -52,7 +53,8 @@ function App() {
 
   const handleDeepScan = async (radarCenter) => {
     try {
-      const response = await fetch('/api/explore-radius', {
+      const API_BASE = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_BASE}/api/explore-radius`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -68,7 +70,7 @@ function App() {
         let addedCount = 0;
         newPlaces.forEach(np => {
           if (!_places.find(p => p.name === np.name)) {
-            _places.push(np);
+            _places.push({ ...np, isNewNode: true });
             addedCount++;
           }
         });
