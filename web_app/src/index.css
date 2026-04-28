@@ -330,3 +330,12 @@ h1, h2, h3 {
   min-width: 320px;
 }
 
+/* Bento UI Enhancements */
+.bento-card:hover .bento-img {
+  transform: scale(1.1) !important;
+}
+
+/* Hide scrollbar for bento container */
+.bento-container::-webkit-scrollbar {
+  display: none;
+}

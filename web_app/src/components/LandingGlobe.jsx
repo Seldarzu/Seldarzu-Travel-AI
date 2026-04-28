@@ -5,7 +5,7 @@ import { MapPin, ArrowRight, Search, Radar } from 'lucide-react';
 const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
   const globeRef = useRef();
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
-  const [city, setCity] = useState("Los Angeles");
+  const [city, setCity] = useState("");
 
   // Handle resize
   useEffect(() => {
@@ -110,7 +110,7 @@ const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
           </p>
 
           <div style={{
-            display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 16px', marginBottom: '24px', border: '1px solid rgba(255,255,255,0.2)'
+            display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 16px', marginBottom: '16px', border: '1px solid rgba(255,255,255,0.2)', pointerEvents: targetLocation ? 'none' : 'auto'
           }}>
              <Search size={20} color="#cbd5e1" style={{ marginRight: '10px' }} />
              <input 
@@ -130,8 +130,8 @@ const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
             onClick={handleStart}
             disabled={scanning}
             style={{
-              padding: '14px 32px',
-              fontSize: '1.1rem',
+              padding: '12px 24px',
+              fontSize: '1rem',
               fontWeight: 600,
               color: '#fff',
               backgroundColor: '#3b82f6',
@@ -142,14 +142,60 @@ const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              margin: '0 auto',
+              margin: '0 auto 24px auto',
               transition: 'all 0.3s ease',
               boxShadow: '0 4px 14px 0 rgba(59, 130, 246, 0.39)',
+              pointerEvents: targetLocation ? 'none' : 'auto'
             }}
           >
-            Canlı Olarak Keşfet
-            <ArrowRight size={20} />
+            Manuel Ara
+            <ArrowRight size={18} />
           </button>
+
+          {/* Premium Bento Showcase */}
+          <div style={{ width: '100%', pointerEvents: targetLocation ? 'none' : 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ height: '1px', flex: 1, background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.2))' }} />
+              <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>Öne Çıkan Rotalar</span>
+              <div style={{ height: '1px', flex: 1, background: 'linear-gradient(to left, transparent, rgba(255,255,255,0.2))' }} />
+            </div>
+
+            <div className="bento-container" style={{
+              display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch'
+            }}>
+              {/* New York Card */}
+              <div 
+                className="bento-card"
+                onClick={() => { setCity('New York'); onExplore('New York'); }}
+                style={{
+                  minWidth: '220px', flex: 1, height: '140px', borderRadius: '12px', position: 'relative', overflow: 'hidden', cursor: scanning ? 'not-allowed' : 'pointer', transition: 'all 0.3s'
+                }}
+              >
+                <img src="https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=600&q=80" alt="New York Shopping" style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }} className="bento-img" />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.2))' }} />
+                <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px' }}>
+                  <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>🗽 New York</h3>
+                  <p style={{ color: '#93c5fd', fontSize: '0.75rem', fontWeight: 500 }}>Lüks Butikler & Flagship'ler</p>
+                </div>
+              </div>
+
+              {/* Delaware Card */}
+              <div 
+                className="bento-card"
+                onClick={() => { setCity('Delaware'); onExplore('Delaware'); }}
+                style={{
+                  minWidth: '220px', flex: 1, height: '140px', borderRadius: '12px', position: 'relative', overflow: 'hidden', cursor: scanning ? 'not-allowed' : 'pointer', transition: 'all 0.3s'
+                }}
+              >
+                <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=600&q=80" alt="Delaware Shopping" style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }} className="bento-img" />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.2))' }} />
+                <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px' }}>
+                  <h3 style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '4px', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>🛍️ Delaware</h3>
+                  <p style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 500 }}>Tax-Free Modası & Outletler</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       

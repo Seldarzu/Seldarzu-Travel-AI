@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Map, { Marker, Popup, NavigationControl, Source, Layer } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Star, MapPin, Tag, Navigation2, Crosshair, Image as ImageIcon, Footprints, Heart } from 'lucide-react';
+import { Star, MapPin, Tag, Navigation2, Crosshair, Image as ImageIcon, Footprints, Heart, Search } from 'lucide-react';
 
 // OSRM Route Layer Style
 const routeLayer = {
@@ -27,7 +27,7 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   return R * c; 
 }
 
-const MapExplorer = ({ places, onDeepScan }) => {
+const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
   const mapRef = useRef();
   const [popupInfo, setPopupInfo] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -44,6 +44,9 @@ const MapExplorer = ({ places, onDeepScan }) => {
   const [routeMode, setRouteMode] = useState('driving'); // driving, walking
   const [activeTab, setActiveTab] = useState('explore'); // explore, route
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true); // For mobile bottom sheet
+  
+  // Bounds Limit
+  const [mapBounds, setMapBounds] = useState(null);
   
   // Filter States
   const [minRating, setMinRating] = useState(false);
@@ -69,7 +72,6 @@ const MapExplorer = ({ places, onDeepScan }) => {
     }
   };
 
-  // New York City coordinates roughly
   const [viewState, setViewState] = useState({
     longitude: -73.98,
     latitude: 40.75,
@@ -77,6 +79,51 @@ const MapExplorer = ({ places, onDeepScan }) => {
     pitch: 45,
     bearing: -17.6
   });
+
+  const hasFitBounds = useRef(false);
+
+  // Dynamic initialization based on places fetched
+  useEffect(() => {
+    if (places && places.length > 0) {
+      const lats = places.map(p => p.latitude).filter(l => l);
+      const lngs = places.map(p => p.longitude).filter(l => l);
+      
+      if (lats.length > 0 && lngs.length > 0) {
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+        
+        // Slightly pad the bounds so markers aren't perfectly on the literal edge (e.g., 5% padding)
+        const latPad = (maxLat - minLat) * 0.1 || 0.05;
+        const lngPad = (maxLng - minLng) * 0.1 || 0.05;
+        
+        const bounds = [
+          [minLng - lngPad, minLat - latPad], // Southwest [lng, lat]
+          [maxLng + lngPad, maxLat + latPad]  // Northeast [lng, lat]
+        ];
+        
+        setMapBounds(bounds);
+
+        if (!hasFitBounds.current) {
+          if (mapRef.current) {
+            mapRef.current.fitBounds(bounds, { padding: 40, duration: 2500, pitch: 45 });
+            hasFitBounds.current = true;
+          } else {
+            // Fallback if ref isn't attached yet
+            setViewState(prev => ({
+              ...prev,
+              longitude: (minLng + maxLng) / 2,
+              latitude: (minLat + maxLat) / 2,
+              zoom: 12,
+              pitch: 45
+            }));
+            hasFitBounds.current = true;
+          }
+        }
+      }
+    }
+  }, [places]);
 
   const categories = useMemo(() => {
     const cats = ['All'];
@@ -227,6 +274,14 @@ const MapExplorer = ({ places, onDeepScan }) => {
       latitude: 40.730610,
       longitude: -73.935242
     });
+    if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: [-73.935242, 40.730610],
+        zoom: 14,
+        duration: 1500,
+        pitch: 50
+      });
+    }
   };
 
   const handleRealLocation = () => {
@@ -237,6 +292,14 @@ const MapExplorer = ({ places, onDeepScan }) => {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude
           });
+          if (mapRef.current) {
+            mapRef.current.flyTo({
+              center: [position.coords.longitude, position.coords.latitude],
+              zoom: 14,
+              duration: 1500,
+              pitch: 50
+            });
+          }
         },
         err => {
           alert("Konum alınamadı. Tarayıcı izinlerini kontrol edin.");
@@ -252,6 +315,7 @@ const MapExplorer = ({ places, onDeepScan }) => {
     if (mapRef.current) {
         mapRef.current.flyTo({
             center: [place.longitude, place.latitude],
+            offset: [0, 100], // Y-offset to push marker down, making room for upward popup
             zoom: 14,
             duration: 1500,
             pitch: 60
@@ -281,7 +345,14 @@ const MapExplorer = ({ places, onDeepScan }) => {
         </div>
 
         <div className="sidebar-header">
-          <h2 style={{ marginBottom: '8px', color: '#fff', fontSize: '1.5rem' }}>Keşif Listesi</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+            <h2 style={{ color: '#fff', fontSize: '1.5rem', margin: 0 }}>Keşif Listesi</h2>
+            {onReturnHome && (
+              <button onClick={onReturnHome} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Search size={14} /> Şehir Ara
+              </button>
+            )}
+          </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>
             Toplam {filteredPlaces.length} mekan listeleniyor.
           </p>
@@ -472,6 +543,7 @@ const MapExplorer = ({ places, onDeepScan }) => {
           ref={mapRef}
           {...viewState}
           onMove={evt => setViewState(evt.viewState)}
+          maxBounds={mapBounds}
           mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
           onClick={e => {
              // Haritada boş bir sokağa tıklanırsa Radar tetiklenir.
@@ -488,7 +560,8 @@ const MapExplorer = ({ places, onDeepScan }) => {
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                pointerEvents: 'none'
               }}>
                 <div style={{
                   position: 'absolute',
@@ -496,7 +569,8 @@ const MapExplorer = ({ places, onDeepScan }) => {
                   backgroundColor: '#3b82f6',
                   borderRadius: '50%',
                   opacity: 0.4,
-                  animation: 'pulse 1.5s infinite'
+                  animation: 'pulse 1.5s infinite',
+                  pointerEvents: 'none'
                 }} />
                 <div style={{
                   position: 'relative',
@@ -504,7 +578,8 @@ const MapExplorer = ({ places, onDeepScan }) => {
                   backgroundColor: '#fff',
                   border: '3px solid #3b82f6',
                   borderRadius: '50%',
-                  boxShadow: '0 0 10px rgba(59, 130, 246, 0.8)'
+                  boxShadow: '0 0 10px rgba(59, 130, 246, 0.8)',
+                  pointerEvents: 'none'
                 }} />
               </div>
               <style dangerouslySetInnerHTML={{__html: `
@@ -526,9 +601,9 @@ const MapExplorer = ({ places, onDeepScan }) => {
           {/* Render Radar Deep Scan UI */}
           {radarCenter && (
             <Marker longitude={radarCenter.lng} latitude={radarCenter.lat} anchor="center">
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', animation: 'radarSweep 2s infinite linear' }} />
-                <div style={{ position: 'absolute', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 10px #10b981' }} />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                <div style={{ position: 'absolute', width: '300px', height: '300px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', animation: 'radarSweep 2s infinite linear', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 10px #10b981', pointerEvents: 'none' }} />
                 <button 
                   onClick={async (e) => { 
                     e.stopPropagation(); 
@@ -539,7 +614,7 @@ const MapExplorer = ({ places, onDeepScan }) => {
                     if(onDeepScan) await onDeepScan(radarCenter); 
                     setRadarCenter(null); 
                   }}
-                  style={{ position: 'absolute', top: '15px', whiteSpace: 'nowrap', zIndex: 10, padding: '8px 16px', backgroundColor: '#3b82f6', color: '#fff', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: '6px', transition: '0.2s', filter: 'brightness(1.1)' }}
+                  style={{ position: 'absolute', top: '15px', whiteSpace: 'nowrap', zIndex: 10, padding: '8px 16px', backgroundColor: '#3b82f6', color: '#fff', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: '6px', transition: '0.2s', filter: 'brightness(1.1)', pointerEvents: 'auto' }}
                   className="radar-btn"
                 >
                   <Crosshair size={14} /> Burayı Derin Tara
@@ -564,7 +639,7 @@ const MapExplorer = ({ places, onDeepScan }) => {
               anchor="bottom"
             >
               <div
-                style={{ cursor: 'pointer', touchAction: 'none', position: 'relative' }}
+                style={{ cursor: 'pointer', position: 'relative' }}
                 onClick={(e) => {
                   e.stopPropagation();
                   onPlaceClick(place);
@@ -583,7 +658,8 @@ const MapExplorer = ({ places, onDeepScan }) => {
                     backgroundColor: '#10b981',
                     opacity: 0.4,
                     animation: 'pulse 2s infinite',
-                    zIndex: -1
+                    zIndex: -1,
+                    pointerEvents: 'none'
                   }} />
                 )}
                 <MapPin 
@@ -599,13 +675,13 @@ const MapExplorer = ({ places, onDeepScan }) => {
           {/* Render Customized Popup */}
           {popupInfo && (
             <Popup
-              anchor="top"
+              anchor="bottom"
               longitude={popupInfo.longitude}
               latitude={popupInfo.latitude}
               onClose={() => setPopupInfo(null)}
               closeOnClick={false}
               maxWidth="360px"
-              offset={[0, 10]}
+              offset={[0, -40]}
               closeButton={true}
               className="custom-popup" 
             >

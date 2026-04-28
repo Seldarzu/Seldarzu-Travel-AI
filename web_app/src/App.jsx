@@ -9,6 +9,13 @@ function App() {
   const [scanning, setScanning] = useState(false);
   const [currentCity, setCurrentCity] = useState('');
 
+  const handleReturnHome = () => {
+    setAppState('landing');
+    setTargetLocation(null);
+    setPlacesData([]);
+    setCurrentCity('');
+  };
+
   const handleStartExploration = async (city) => {
     setScanning(true);
     setCurrentCity(city);
@@ -24,6 +31,15 @@ function App() {
       });
       
       const data = await response.json();
+      
+      if (data.error) {
+          console.error("Backend Error:", data.error);
+          alert(`Google Haritalar API Hatası: \n${data.error}\n\nLütfen Google Cloud Console üzerinden Places API (New) yetkilendirmelerini kontrol edin.`);
+          setScanning(false);
+          setPlacesData([]);
+          setAppState('exploring');
+          return;
+      }
       
       if (data && data.places && data.places.length > 0) {
         // Sort by final_score descending
@@ -63,6 +79,12 @@ function App() {
       });
       const data = await response.json();
       
+      if (data.error) {
+          console.error("Backend Radar Error:", data.error);
+          alert(`Radar Taraması Hatası: \n${data.error}\n\nLütfen API Console yetkilerinizi aktif edin.`);
+          return;
+      }
+      
       const newPlaces = data.places || [];
       
       setPlacesData(prevPlaces => {
@@ -101,7 +123,7 @@ function App() {
         transition: 'opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: 1
       }}>
-        {appState === 'exploring' && <MapExplorer places={placesData} onDeepScan={handleDeepScan} />}
+        {appState === 'exploring' && <MapExplorer places={placesData} onDeepScan={handleDeepScan} onReturnHome={handleReturnHome} />}
       </div>
 
       {/* Landing Layer - Initially visible */}
