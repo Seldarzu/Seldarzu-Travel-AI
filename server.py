@@ -3,9 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import math
+import concurrent.futures
 
 from data_engine import AmericaTravelEngine
-from settings import SERP_API_KEY, get_search_queries
+from settings import GOOGLE_MAPS_API_KEY, get_search_queries
 
 app = FastAPI()
 
@@ -25,12 +26,16 @@ def explore_city(req: ExploreRequest):
     engine = AmericaTravelEngine()
     queries = get_search_queries(req.city)
     
-    for query in queries:
-        engine.fetch_from_google(query, SERP_API_KEY)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries), 10)) as executor:
+        futures = [executor.submit(engine.fetch_from_google, query, GOOGLE_MAPS_API_KEY) for query in queries]
+        concurrent.futures.wait(futures)
         
     final_df = engine.calculate_final_score()
     
     if final_df.empty:
+        err_msg = getattr(engine, 'api_error', None)
+        if err_msg:
+            return {"places": [], "error": err_msg}
         return {"places": []}
         
     final_df = final_df.fillna("")
@@ -45,17 +50,30 @@ class ExploreRadiusRequest(BaseModel):
 @app.post("/api/explore-radius")
 def explore_radius(req: ExploreRadiusRequest):
     engine = AmericaTravelEngine()
-    queries = get_search_queries(req.city)
     
-    # 15z roughly covers a local neighborhood area in Google Maps radius
-    ll_param = f"@{req.lat},{req.lng},15z"
+    # Use generic queries since we rely on EXACT lat/lng location bias
+    queries = [
+        "premium luxury shopping and boutiques",
+        "best highly rated restaurants and fine dining",
+        "aesthetic cafes and bakeries",
+        "scenic parks and outdoor spaces",
+        "museums and art galleries",
+        "local hidden gem attractions"
+    ]
     
-    for query in queries:
-        engine.fetch_from_google(query, SERP_API_KEY, ll=ll_param)
+    # Pass raw lat,lng string for Google Places Location bias
+    ll_param = f"{req.lat},{req.lng}"
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries), 10)) as executor:
+        futures = [executor.submit(engine.fetch_from_google, query, GOOGLE_MAPS_API_KEY, ll_param) for query in queries]
+        concurrent.futures.wait(futures)
         
     final_df = engine.calculate_final_score()
     
     if final_df.empty:
+        err_msg = getattr(engine, 'api_error', None)
+        if err_msg:
+            return {"places": [], "error": err_msg}
         return {"places": []}
         
     final_df = final_df.fillna("")

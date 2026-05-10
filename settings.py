@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- API AYARLARI ---
-SERP_API_KEY = os.environ.get("SERP_API_KEY", "") 
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "") 
 
 # --- SEYAHAT DETAYLARI ---
 TRAVEL_MONTH = "May"
@@ -13,22 +13,41 @@ TRAVEL_MONTH = "May"
 # --- GELİŞMİŞ ARAMA SORGULARI ---
 # Veri madenciliği motoru bu kategorilerde derin tarama yapacak
 def get_search_queries(city: str):
-    return [
-        # Mevcut Premium Seyahat Kategorileri
-        f"best botanical gardens and parks in {city}",
-        f"hidden gems and secret spots in {city}",
-        f"locally loved coffee shops and bakeries in {city}",
-        f"best rooftop bars and terraces in {city}",
-        f"authentic jazz clubs and speakeasies in {city}",
-        f"scenic waterfront views in {city}",
-        
-        # Eklenen Detaylı Alışveriş Kategorileri (Premium odaklı ve yerel)
-        f"luxury fashion boutiques and high-end shopping in {city}",
-        f"famous street markets and local artisan crafts in {city}",
-        f"exclusive designer districts and premium malls in {city}",
-        f"vintage clothing stores and thrift shops in {city}",
-        f"unique concept stores and concept boutiques in {city}"
-    ]
+    city_lower = city.lower()
+    
+    if "new york" in city_lower or "ny" in city_lower or "nyc" in city_lower:
+        return [
+            # NYC Ultra-Premium Shopping & Core Experiences
+            "Exclusive 5th Avenue designer boutiques and flagship stores in New York",
+            "Hidden vintage clothing stores and luxury consignment in SoHo New York",
+            "Premium concept stores and high-end showrooms in Manhattan",
+            "Luxury jewelry and watch boutiques in New York City",
+            "Famous NYC department stores and iconic shopping spots",
+            "Locally loved coffee shops and aesthetic bakeries in New York",
+            "Hidden speakeasies and underground jazz clubs in Brooklyn",
+            "Premium omakase and Michelin star dining in NYC"
+        ]
+    elif "delaware" in city_lower or "de" in city_lower or "wilmington" in city_lower:
+        return [
+            # Delaware Tax-Free Shopping & Coastal Luxury
+            "Premium tax-free outlet malls and designer outlets in Delaware",
+            "Exclusive designer shopping centers and upscale fashion in Wilmington DE",
+            "Local artisan crafts and coastal boutiques in Rehoboth Beach",
+            "High-end footwear and boutique fashion retailers in Delaware",
+            "Luxury homeware and unique concept boutiques in Delaware",
+            "Locally famous crab houses and premium seafood spots in Delaware",
+            "Scenic waterfront cafes and oceanview dining in Rehoboth Beach",
+            "Historic Wilmington estates and picturesque botanical gardens"
+        ]
+    else:
+        # Fallback for other searches
+        return [
+            f"luxury fashion boutiques and premium shopping in {city}",
+            f"famous outlet malls and designer discount stores in {city}",
+            f"unique concept stores and artisan boutiques in {city}",
+            f"best hidden gem restaurants and cafes in {city}",
+            f"scenic parks and beautiful outdoor spaces in {city}"
+        ]
 
 # --- PUANLAMA PARAMETRELERİ (Ağırlıklar) ---
 # Mayıs ayı için açık hava ve yerellik öncelikli
