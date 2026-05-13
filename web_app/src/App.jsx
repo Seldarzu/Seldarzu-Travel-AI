@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LandingGlobe from './components/LandingGlobe';
 import MapExplorer from './components/MapExplorer';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [appState, setAppState] = useState('landing'); // 'landing' or 'exploring'
@@ -123,7 +124,11 @@ function App() {
         transition: 'opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: 1
       }}>
-        {appState === 'exploring' && <MapExplorer places={placesData} onDeepScan={handleDeepScan} onReturnHome={handleReturnHome} />}
+        {appState === 'exploring' && (
+          <ErrorBoundary label="Harita yüklenirken hata oluştu. Lütfen sayfayı yenileyin.">
+            <MapExplorer places={placesData} onDeepScan={handleDeepScan} onReturnHome={handleReturnHome} />
+          </ErrorBoundary>
+        )}
       </div>
 
       {/* Landing Layer - Initially visible */}
@@ -138,11 +143,13 @@ function App() {
         transition: 'opacity 1s ease-in-out',
         zIndex: 2
       }}>
-        <LandingGlobe 
-          onExplore={handleStartExploration} 
-          scanning={scanning}
-          targetLocation={targetLocation}
-        />
+        <ErrorBoundary label="Globe yüklenemedi. Tarayıcınız WebGL desteklemiyor olabilir.">
+          <LandingGlobe
+            onExplore={handleStartExploration}
+            scanning={scanning}
+            targetLocation={targetLocation}
+          />
+        </ErrorBoundary>
       </div>
     </div>
   );
