@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import Map, { Marker, Popup, NavigationControl, Source, Layer } from 'react-map-gl/maplibre';
+import Map, { Marker, NavigationControl, Source, Layer } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Star, MapPin, Tag, Navigation2, Crosshair, Image as ImageIcon, Footprints, Heart, Search } from 'lucide-react';
+import { Star, MapPin, Tag, Navigation2, Crosshair, Heart, Search, Clock } from 'lucide-react';
+import PlaceDetailDrawer from './PlaceDetailDrawer';
 
 // OSRM Route Layer Style
 const routeLayer = {
@@ -35,8 +36,6 @@ const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
   // New States
   const [userLocation, setUserLocation] = useState(null);
   const [routeData, setRouteData] = useState(null);
-  const [placeImage, setPlaceImage] = useState(null);
-  const [imageLoading, setImageLoading] = useState(false);
   const [radarCenter, setRadarCenter] = useState(null);
   
   // Route & UI Management States
@@ -52,7 +51,8 @@ const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
   const [minRating, setMinRating] = useState(false);
   const [highScoreOnly, setHighScoreOnly] = useState(false);
   const [onlyWalkingDistance, setOnlyWalkingDistance] = useState(false);
-  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [onlyFavorites, setOnlyFavorites]   = useState(false);
+  const [onlyOpenNow, setOnlyOpenNow]       = useState(false);
 
   // Favorites LocalStorage State
   const [favorites, setFavorites] = useState(() => {
@@ -156,66 +156,14 @@ const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
     if (onlyFavorites) {
       result = result.filter(p => favorites.find(f => f.name === p.name));
     }
+    if (onlyOpenNow) {
+      result = result.filter(p => p.open_now === true);
+    }
 
     return result;
-  }, [places, selectedCategory, minRating, highScoreOnly, onlyWalkingDistance, userLocation, onlyFavorites, favorites]);
+  }, [places, selectedCategory, minRating, highScoreOnly, onlyWalkingDistance, userLocation, onlyFavorites, favorites, onlyOpenNow]);
 
-  // Handle Image Fetching
-  useEffect(() => {
-    const fetchImage = async () => {
-      if (!popupInfo) {
-        setPlaceImage(null);
-        return;
-      }
-      setImageLoading(true);
-      setPlaceImage(null);
-
-      try {
-        // Priority 1: Kendi backend proxy'miz üzerinden güvenli foto
-        if (popupInfo.thumbnail) {
-            const API_BASE = import.meta.env.VITE_API_URL || '';
-            setPlaceImage(`${API_BASE}/api/photo?name=${encodeURIComponent(popupInfo.thumbnail)}`);
-            setImageLoading(false);
-            return;
-        }
-
-        // Priority 2: Wikipedia API
-        const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(popupInfo.name)}&prop=pageimages&format=json&pithumbsize=600&origin=*`);
-        const data = await res.json();
-        if (data.query && data.query.pages) {
-          const pageId = Object.keys(data.query.pages)[0];
-          if (pageId !== '-1' && data.query.pages[pageId].thumbnail) {
-            setPlaceImage(data.query.pages[pageId].thumbnail.source);
-            setImageLoading(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Image fetching failed", err);
-      }
-
-      // Priority 3: Extended Category Fallback Theme
-      const categoryStr = (popupInfo.category || '').toLowerCase();
-      let fallback = 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=600&q=80'; // Park default
-
-      if (categoryStr.includes('store') || categoryStr.includes('shop') || categoryStr.includes('boutique') || categoryStr.includes('mall') || categoryStr.includes('clothing')) {
-         fallback = 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=600&q=80'; // Retail shop interior
-      } else if (categoryStr.includes('restaurant') || categoryStr.includes('cafe')) {
-         fallback = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80'; // Restaurant aesthetic
-      } else if (categoryStr.includes('bar') || categoryStr.includes('club')) {
-         fallback = 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=600&q=80'; // Moody bar
-      } else if (categoryStr.includes('art') || categoryStr.includes('museum')) {
-         fallback = 'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=600&q=80'; // Art gallery
-      } else if (categoryStr.includes('coffee') || categoryStr.includes('bakery')) {
-         fallback = 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&q=80'; // Coffee shop
-      }
-
-      setPlaceImage(fallback);
-      setImageLoading(false);
-    };
-
-    fetchImage();
-  }, [popupInfo]);
+  // Popup image logic artık PlaceDetailDrawer içinde yönetiliyor
 
   // Handle Route Fetching
   useEffect(() => {
@@ -461,6 +409,16 @@ const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
                 >
                   🚶 Yürüme (2km)
                 </button>
+                <button
+                  onClick={() => setOnlyOpenNow(!onlyOpenNow)}
+                  style={{
+                    flexShrink: 0, padding: '6px 12px', borderRadius: '16px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid #34d399', cursor: 'pointer', transition: '0.2s',
+                    background: onlyOpenNow ? '#34d399' : 'rgba(52, 211, 153, 0.1)', color: onlyOpenNow ? '#000' : '#34d399',
+                    display: 'flex', alignItems: 'center', gap: '5px'
+                  }}
+                >
+                  <Clock size={13} /> Şu An Açık
+                </button>
               </div>
             </div>
           )}
@@ -539,7 +497,7 @@ const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
       </div>
 
       {/* Map Content */}
-      <div className={`map-wrapper ${!isSidebarExpanded ? 'expanded' : ''}`}>
+      <div className={`map-wrapper ${!isSidebarExpanded ? 'expanded' : ''}`} style={{ position: 'relative' }}>
         <Map
           ref={mapRef}
           {...viewState}
@@ -673,90 +631,25 @@ const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
             </Marker>
           ))}
 
-          {/* Render Customized Popup */}
-          {popupInfo && (
-            <Popup
-              anchor="bottom"
-              longitude={popupInfo.longitude}
-              latitude={popupInfo.latitude}
-              onClose={() => setPopupInfo(null)}
-              closeOnClick={false}
-              maxWidth="360px"
-              offset={[0, -40]}
-              closeButton={true}
-              className="custom-popup" 
-            >
-              <div className="popup-body">
-                {/* Photo Header */}
-                <div style={{ width: '100%', height: '160px', backgroundColor: '#1e293b', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {/* Favorite Button on Image Overlay */}
-                    <div 
-                        style={{ position: 'absolute', top: '12px', right: '40px', cursor: 'pointer', zIndex: 10, background: 'rgba(0,0,0,0.5)', padding: '6px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(popupInfo); }}
-                    >
-                         <Heart size={20} color="#ec4899" fill={favorites.find(f => f.name === popupInfo.name) ? "#ec4899" : "transparent"} strokeWidth={2} style={{ transition: '0.2s' }} />
-                    </div>
-
-                    {imageLoading ? (
-                        <ImageIcon size={32} color="#94a3b8" className="animate-pulse" />
-                    ) : placeImage ? (
-                        <img src={placeImage} alt={popupInfo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                        <ImageIcon size={32} color="#94a3b8" />
-                    )}
-                    
-                    {/* Gradient Overlay for text readability */}
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '80px', background: 'linear-gradient(to top, var(--glass-bg), transparent)' }} />
-                    
-                    <div style={{ position: 'absolute', bottom: '12px', left: '16px', right: '16px' }}>
-                         <h3 style={{ fontSize: '1.2rem', color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{popupInfo.name}</h3>
-                    </div>
-                </div>
-                
-                {/* Info Body */}
-                <div style={{ padding: '16px', textAlign: 'left', background: 'transparent' }}>
-                  <div style={{ display: 'inline-block', backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '16px', fontWeight: 500 }}>
-                    {popupInfo.category}
-                  </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Google Puanı</span>
-                      <span style={{ fontWeight: 600, color: '#fbbf24', fontSize: '0.9rem' }}>{popupInfo.google_rating} ★</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Yorum Sayısı</span>
-                      <span style={{ fontWeight: 600, color: '#e2e8f0', fontSize: '0.9rem' }}>{popupInfo.review_count}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '6px' }}>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Zeka Skoru</span>
-                      <span style={{ fontWeight: 600, color: '#60a5fa', fontSize: '0.9rem' }}>{popupInfo.final_score}</span>
-                    </div>
-                    
-                    {routeData && popupInfo && routeStops.includes(popupInfo) && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', color: '#10b981', fontSize: '0.85rem', fontWeight: 500, background: 'rgba(16, 185, 129, 0.1)', padding: '8px', borderRadius: '6px' }}>
-                           <Footprints size={16} /> Rota çizildi!
-                        </div>
-                    )}
-
-                    <button 
-                       onClick={handleAddToRoute}
-                       disabled={routeStops.find(s => s.name === popupInfo?.name)}
-                       style={{ 
-                         marginTop: '12px', padding: '10px', width: '100%', 
-                         backgroundColor: routeStops.find(s => s.name === popupInfo?.name) ? 'rgba(16, 185, 129, 0.3)' : '#3b82f6', 
-                         color: '#fff', border: 'none', borderRadius: '8px', 
-                         cursor: routeStops.find(s => s.name === popupInfo?.name) ? 'default' : 'pointer', fontWeight: 600 
-                       }}
-                    >
-                       {routeStops.find(s => s.name === popupInfo?.name) ? '✅ Rotaya Eklendi' : '🚗 Rotaya Ekle'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </Popup>
-          )}
+          {/* PlaceDetailDrawer haritanın üstüne ekleniyor */}
         </Map>
+
+        {/* Detail Drawer */}
+        {popupInfo && (
+          <PlaceDetailDrawer
+            place={popupInfo}
+            onClose={() => setPopupInfo(null)}
+            onAddToRoute={(place) => {
+              if (!routeStops.find(s => s.name === place.name)) {
+                setRouteStops([...routeStops, place]);
+                setActiveTab('route');
+              }
+            }}
+            routeStops={routeStops}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+          />
+        )}
       </div>
 
     </div>
