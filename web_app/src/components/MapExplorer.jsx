@@ -171,9 +171,10 @@ const MapExplorer = ({ places, onDeepScan, onReturnHome }) => {
       setPlaceImage(null);
 
       try {
-        // Priority 1: Real Google Place Photo (from SerpAPI)
+        // Priority 1: Kendi backend proxy'miz üzerinden güvenli foto
         if (popupInfo.thumbnail) {
-            setPlaceImage(popupInfo.thumbnail);
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            setPlaceImage(`${API_BASE}/api/photo?name=${encodeURIComponent(popupInfo.thumbnail)}`);
             setImageLoading(false);
             return;
         }

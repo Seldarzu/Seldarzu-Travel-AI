@@ -1,8 +1,9 @@
 import json
-from fastapi import FastAPI
+import requests as req_lib
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-import math
 import concurrent.futures
 
 from data_engine import AmericaTravelEngine
@@ -21,10 +22,27 @@ app.add_middleware(
 class ExploreRequest(BaseModel):
     city: str
 
+@app.get("/api/photo")
+def get_photo(name: str = Query(..., min_length=5, max_length=500)):
+    """API key'i gizli tutarak Google foto proxy'si"""
+    url = f"https://places.googleapis.com/v1/{name}/media?maxHeightPx=800&key={GOOGLE_MAPS_API_KEY}"
+    try:
+        resp = req_lib.get(url, stream=True, timeout=10)
+        content_type = resp.headers.get("content-type", "image/jpeg")
+        return StreamingResponse(resp.iter_content(chunk_size=8192), media_type=content_type)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Fotoğraf alınamadı: {str(e)}")
+
+
 @app.post("/api/explore")
 def explore_city(req: ExploreRequest):
+    city = req.city.strip()
+    if len(city) < 2:
+        raise HTTPException(status_code=400, detail="Şehir adı en az 2 karakter olmalıdır.")
+    if len(city) > 100:
+        raise HTTPException(status_code=400, detail="Şehir adı 100 karakterden uzun olamaz.")
     engine = AmericaTravelEngine()
-    queries = get_search_queries(req.city)
+    queries = get_search_queries(city)
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries), 10)) as executor:
         futures = [executor.submit(engine.fetch_from_google, query, GOOGLE_MAPS_API_KEY) for query in queries]
@@ -49,6 +67,8 @@ class ExploreRadiusRequest(BaseModel):
 
 @app.post("/api/explore-radius")
 def explore_radius(req: ExploreRadiusRequest):
+    if not (-90 <= req.lat <= 90) or not (-180 <= req.lng <= 180):
+        raise HTTPException(status_code=400, detail="Geçersiz koordinat değerleri.")
     engine = AmericaTravelEngine()
     
     # Use generic queries since we rely on EXACT lat/lng location bias

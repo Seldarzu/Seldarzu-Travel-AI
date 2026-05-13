@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import requests
 import threading
@@ -68,7 +69,6 @@ class AmericaTravelEngine:
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                import time
                 response = requests.post(url, headers=headers, json=data, timeout=15)
                 resp_data = response.json()
                 
@@ -98,13 +98,13 @@ class AmericaTravelEngine:
                     lat = place.get("location", {}).get("latitude")
                     lng = place.get("location", {}).get("longitude")
                     
-                    # Construct high-rez image from photo reference
+                    # Sadece photo_name sakla — API key'i frontend'e gönderme
                     photos = place.get("photos", [])
                     thumbnail = ""
                     if photos:
-                        photo_name = photos[0].get("name")
+                        photo_name = photos[0].get("name", "")
                         if photo_name:
-                            thumbnail = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=800&key={api_key}"
+                            thumbnail = photo_name  # Tam URL değil, sadece name
                     
                     if lat and lng:
                         self.add_place(
@@ -127,6 +127,13 @@ class AmericaTravelEngine:
         # Gelişmiş Puanlama Algoritması
         def score_logic(row):
             s = (row['google_rating'] * 12) + row['may_suitability']
+            cat = str(row.get('category', '')).lower()
+            # Açık hava bonusu (daha önce tanımlıydı ama kullanılmıyordu)
+            if any(k in cat for k in ['park', 'garden', 'outdoor', 'nature', 'beach']):
+                s += WEIGHTS['outdoor_bonus']
+            # Teras / çatı bonusu
+            if any(k in cat for k in ['rooftop', 'terrace', 'rooftop bar']):
+                s += WEIGHTS['rooftop_bonus']
             if 200 < row['review_count'] < 3000: s += WEIGHTS['hidden_gem_bonus']
             if row['is_local_favorite']: s += 10
             s -= (row['price_level'] * WEIGHTS['price_penalty'])

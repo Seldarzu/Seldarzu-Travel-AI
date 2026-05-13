@@ -21,8 +21,8 @@ const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
       globeRef.current.controls().autoRotateSpeed = 1.2;
       globeRef.current.controls().enableZoom = false; // Disable zoom on landing
       
-      // Point camera roughly at North America with some tilt
-      globeRef.current.pointOfView({ lat: 25, lng: -90, altitude: 2 });
+      // Globe sağda görünsün — kart solda olduğu için kamerayı sağa kaydır
+      globeRef.current.pointOfView({ lat: 35, lng: -60, altitude: 1.6 });
     }
   }, []);
 
@@ -67,10 +67,11 @@ const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
           inset: 0,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
-          background: 'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.6) 100%)',
-          pointerEvents: 'none', 
+          paddingLeft: 'clamp(24px, 5vw, 80px)',
+          background: 'linear-gradient(to right, rgba(0,0,0,0.60) 0%, rgba(0,0,0,0.15) 55%, transparent 100%)',
+          pointerEvents: 'none',
           opacity: targetLocation ? 0 : 1,
           transition: 'opacity 0.5s ease'
         }}
@@ -148,7 +149,7 @@ const LandingGlobe = ({ onExplore, scanning, targetLocation }) => {
               pointerEvents: targetLocation ? 'none' : 'auto'
             }}
           >
-            Manuel Ara
+            Keşfet
             <ArrowRight size={18} />
           </button>
 
