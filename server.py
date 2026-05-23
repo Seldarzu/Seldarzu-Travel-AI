@@ -89,13 +89,19 @@ class ExploreRadiusRequest(BaseModel):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+@app.get("/api/health")
+def health():
+    """Render health check — servis uyanık mı kontrol eder."""
+    return {"status": "ok", "version": "1.0.0"}
+
+
 @app.get("/api/photo")
 @limiter.limit("30/minute")
 def get_photo(request: Request, name: str = Query(..., min_length=5, max_length=500)):
-    """API key'i gizli tutarak Google foto proxy'si."""
-    url = f"https://places.googleapis.com/v1/{name}/media?maxHeightPx=800&key={GOOGLE_MAPS_API_KEY}"
+    """API key'i gizli tutarak Google foto proxy'si. Key header üzerinden gönderilir — URL loglarına düşmez."""
+    url = f"https://places.googleapis.com/v1/{name}/media?maxHeightPx=800&skipHttpRedirect=true"
     try:
-        resp = req_lib.get(url, stream=True, timeout=10)
+        resp = req_lib.get(url, stream=True, timeout=10, headers={"X-Goog-Api-Key": GOOGLE_MAPS_API_KEY})
         content_type = resp.headers.get("content-type", "image/jpeg")
         return StreamingResponse(resp.iter_content(chunk_size=8192), media_type=content_type)
     except Exception as e:
@@ -122,8 +128,12 @@ def explore_city(request: Request, req: ExploreRequest):
     queries = get_search_queries(city)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries), 10)) as executor:
-        futures = [executor.submit(engine.fetch_from_google, query, GOOGLE_MAPS_API_KEY) for query in queries]
-        concurrent.futures.wait(futures)
+        futures = {executor.submit(engine.fetch_from_google, query, GOOGLE_MAPS_API_KEY): query for query in queries}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"Thread hatası ({futures[future]}): {e}")
 
     final_df = engine.calculate_final_score()
 
@@ -164,8 +174,12 @@ def explore_radius(request: Request, req: ExploreRadiusRequest):
     ll_param = f"{req.lat},{req.lng}"
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(queries), 10)) as executor:
-        futures = [executor.submit(engine.fetch_from_google, query, GOOGLE_MAPS_API_KEY, ll_param) for query in queries]
-        concurrent.futures.wait(futures)
+        futures = {executor.submit(engine.fetch_from_google, query, GOOGLE_MAPS_API_KEY, ll_param): query for query in queries}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"Radar thread hatası ({futures[future]}): {e}")
 
     final_df = engine.calculate_final_score()
 

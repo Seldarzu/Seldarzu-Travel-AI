@@ -10,7 +10,7 @@ logger = logging.getLogger("seldarzu")
 class AmericaTravelEngine:
     def __init__(self):
         self.columns = [
-            'name', 'category', 'google_rating', 'review_count',
+            'place_id', 'name', 'category', 'google_rating', 'review_count',
             'price_level', 'is_local_favorite', 'may_suitability',
             'latitude', 'longitude', 'thumbnail',
             # Yeni alanlar
@@ -20,7 +20,7 @@ class AmericaTravelEngine:
         self.lock = threading.Lock()
         self.api_error = None
 
-    def add_place(self, name, cat, rating, review_count, price, lat, lng,
+    def add_place(self, place_id, name, cat, rating, review_count, price, lat, lng,
                   thumbnail, local=False,
                   open_now=None, opening_hours=None,
                   phone="", website="", maps_uri="", reviews=None):
@@ -32,6 +32,7 @@ class AmericaTravelEngine:
                 break
 
         new_row = {
+            'place_id': place_id,
             'name': name, 'category': cat, 'google_rating': rating,
             'review_count': review_count, 'price_level': price,
             'is_local_favorite': local, 'may_suitability': may_score,
@@ -52,6 +53,7 @@ class AmericaTravelEngine:
             "Content-Type": "application/json",
             "X-Goog-Api-Key": api_key,
             "X-Goog-FieldMask": (
+                "places.id,"
                 "places.displayName,"
                 "places.primaryTypeDisplayName,"
                 "places.rating,"
@@ -95,6 +97,7 @@ class AmericaTravelEngine:
                     return False
 
                 for place in resp_data.get("places", []):
+                    place_id = place.get("id", "")
                     name     = place.get("displayName", {}).get("text", "Unknown")
                     category = place.get("primaryTypeDisplayName", {}).get("text", "General")
                     rating   = place.get("rating", 0)
@@ -140,7 +143,7 @@ class AmericaTravelEngine:
 
                     if lat and lng:
                         self.add_place(
-                            name, category, rating, rev_cnt, price_int, lat, lng, thumbnail,
+                            place_id, name, category, rating, rev_cnt, price_int, lat, lng, thumbnail,
                             local=(0 < rev_cnt < 5000 and rating >= 4.6),
                             open_now=open_now,
                             opening_hours=open_hours,
@@ -162,7 +165,11 @@ class AmericaTravelEngine:
     def calculate_final_score(self):
         if self.data.empty:
             return self.data
-        self.data = self.data.drop_duplicates(subset=["name"])
+        # place_id varsa ona göre, yoksa name+latitude kombinasyonuna göre dedup
+        if "place_id" in self.data.columns and self.data["place_id"].astype(bool).any():
+            self.data = self.data[self.data["place_id"] != ""].drop_duplicates(subset=["place_id"])
+        else:
+            self.data = self.data.drop_duplicates(subset=["name"])
 
         def score_logic(row):
             s = (row["google_rating"] * 12) + row["may_suitability"]

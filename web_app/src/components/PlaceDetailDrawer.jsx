@@ -18,8 +18,8 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
   const [hoursOpen, setHoursOpen] = useState(false);
   const [tab, setTab]             = useState('info'); // 'info' | 'reviews'
 
-  const isFav      = favorites?.find(f => f.name === place?.name);
-  const inRoute    = routeStops?.find(s => s.name === place?.name);
+  const isFav   = favorites?.find(f => place?.place_id ? f.place_id === place.place_id : f.name === place?.name);
+  const inRoute = routeStops?.find(s => place?.place_id ? s.place_id === place.place_id : s.name === place?.name);
 
   useEffect(() => {
     if (!place) return;
@@ -70,7 +70,8 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
           <div className="drawer-photo">
             {imgSrc
               ? <img src={imgSrc} alt={place.name}
-                  style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                  onError={() => setImgSrc(null)} />
               : <div style={{ width:'100%', height:'100%', background:'rgba(255,255,255,0.05)',
                   display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <MapPin size={36} color="#475569" />
@@ -83,8 +84,8 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
           <div className="drawer-title-area">
             <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
               <span className="drawer-category-chip">{place.category}</span>
-              {openNow === true  && <span className="open-badge">● Şu An Açık</span>}
-              {openNow === false && <span className="closed-badge">● Kapalı</span>}
+              {openNow === true  && <span className="open-badge">● Open Now</span>}
+              {openNow === false && <span className="closed-badge">● Closed</span>}
             </div>
             <h2 className="drawer-title">{place.name}</h2>
             <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
@@ -99,7 +100,7 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
                 <span style={{ color:'#94a3b8', fontSize:'0.85rem' }}>{PRICE[place.price_level]}</span>
               )}
               <span style={{ color:'#60a5fa', fontSize:'0.8rem', fontWeight:600 }}>
-                Skor: {place.final_score}
+                Score: {place.final_score}
               </span>
             </div>
           </div>
@@ -108,10 +109,10 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
         {/* Tab bar */}
         <div className="drawer-tabs">
           <button className={`drawer-tab ${tab==='info' ? 'active' : ''}`}
-            onClick={() => setTab('info')}>Bilgi</button>
+            onClick={() => setTab('info')}>Info</button>
           <button className={`drawer-tab ${tab==='reviews' ? 'active' : ''}`}
             onClick={() => setTab('reviews')}>
-            Yorumlar {hasReviews ? `(${reviews.length})` : ''}
+            Reviews {hasReviews ? `(${reviews.length})` : ''}
           </button>
         </div>
 
@@ -126,7 +127,7 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
                   <button className="hours-toggle" onClick={() => setHoursOpen(!hoursOpen)}>
                     <span style={{ display:'flex', alignItems:'center', gap:'8px' }}>
                       <Clock size={16} color="#60a5fa" />
-                      <span style={{ fontWeight:600, color:'#fff' }}>Çalışma Saatleri</span>
+                      <span style={{ fontWeight:600, color:'#fff' }}>Opening Hours</span>
                     </span>
                     {hoursOpen ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
                   </button>
@@ -175,7 +176,7 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
                 </div>
               )) : (
                 <p style={{ color:'#64748b', textAlign:'center', marginTop:'20px' }}>
-                  Bu mekan için henüz yorum verisi yok.
+                  No review data available for this place.
                 </p>
               )}
             </div>
@@ -186,14 +187,14 @@ export default function PlaceDetailDrawer({ place, onClose, onAddToRoute, routeS
         <div className="drawer-actions">
           <a href={directionsUrl} target="_blank" rel="noreferrer" className="btn-directions">
             <Navigation size={16} />
-            Yol Tarifi Al
+            Get Directions
           </a>
           <button
             onClick={() => onAddToRoute?.(place)}
             disabled={!!inRoute}
             className={`btn-route ${inRoute ? 'added' : ''}`}
           >
-            {inRoute ? '✅ Rotada' : '🗺 Rotaya Ekle'}
+            {inRoute ? '✅ In Route' : '🗺 Add to Route'}
           </button>
         </div>
       </div>
