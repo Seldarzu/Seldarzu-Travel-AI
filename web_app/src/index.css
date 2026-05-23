@@ -51,8 +51,9 @@ h1, h2, h3 {
 }
 
 .glass-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 1.5rem;
@@ -62,6 +63,30 @@ h1, h2, h3 {
 .glass-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Rota stop drag-and-drop ── */
+.route-stop-card {
+  touch-action: none; /* touch drag için */
+}
+
+.route-stop-card:hover {
+  transform: none; /* glass-card hover override */
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.route-stop-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.route-stop-card.drag-over {
+  border-color: #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 /* Animations */
@@ -150,16 +175,25 @@ h1, h2, h3 {
 .map-wrapper {
   flex: 1;
   height: 100%;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
 }
 
 .responsive-glass-card {
   pointer-events: auto;
   text-align: center;
-  max-width: 500px;
+  max-width: 520px;
+  width: 90%;
   padding: 40px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.06);
   position: relative;
   overflow: hidden;
+  background: rgba(10, 18, 38, 0.65) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 20px !important;
 }
 
 .responsive-title {
@@ -170,28 +204,34 @@ h1, h2, h3 {
 
 @media (max-width: 768px) {
   .map-explorer-layout {
-    flex-direction: column-reverse; /* Map on top, sidebar as a bottom sheet */
-  }
-  
-  .map-wrapper {
-    width: 100%;
-    height: 45%; 
-    transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  .sidebar {
-    width: 100%;
-    height: 55%; 
-    box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
-    transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-direction: column; /* Sidebar önce (üstte), map altta */
   }
 
-  .map-wrapper.expanded {
-    height: calc(100% - 70px) !important; 
+  /* Varsayılan: Liste tam ekran, harita gizli */
+  .sidebar {
+    width: 100%;
+    height: 100%;
+    box-shadow: none;
+    transition: height 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    order: 1;
   }
-  
+
+  .map-wrapper {
+    width: 100%;
+    height: 0;
+    overflow: hidden;
+    transition: height 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    order: 2;
+  }
+
+  /* Harita modu: sidebar küçük, harita tam ekran */
+  .map-wrapper.expanded {
+    height: calc(100% - 56px) !important;
+    overflow: visible;
+  }
+
   .sidebar.collapsed {
-    height: 70px !important; 
+    height: 56px !important;
     overflow: hidden;
   }
 
@@ -199,9 +239,10 @@ h1, h2, h3 {
     display: flex !important;
     justify-content: center;
     align-items: center;
-    padding: 12px 0 0 0;
+    padding: 10px 0;
     cursor: pointer;
     background: transparent;
+    min-height: 36px;
   }
 
   .drag-pill {
@@ -214,6 +255,15 @@ h1, h2, h3 {
 
   .sidebar-drag-handle:active .drag-pill {
     background: rgba(255,255,255,0.6);
+  }
+
+  .drag-back-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #60a5fa;
+    font-size: 0.85rem;
+    font-weight: 600;
   }
 
   .sidebar-header {
@@ -330,3 +380,458 @@ h1, h2, h3 {
   min-width: 320px;
 }
 
+/* Bento UI Enhancements */
+.bento-card:hover .bento-img {
+  transform: scale(1.1) !important;
+}
+
+/* Hide scrollbar for bento container */
+.bento-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Place Detail Drawer ──────────────────────────────────────────────── */
+.drawer-backdrop {
+  display: none;
+}
+
+.place-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100%;
+  background: rgba(10, 18, 38, 0.97);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255,255,255,0.08);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+  animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.drawer-close-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.drawer-close-btn:hover { background: rgba(255,255,255,0.15); }
+
+.drawer-fav-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.drawer-fav-btn:hover { background: rgba(236,72,153,0.2); }
+
+.drawer-photo {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  background: #0f172a;
+  flex-shrink: 0;
+}
+.drawer-photo-gradient {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 100px;
+  background: linear-gradient(to top, rgba(10,18,38,0.97), transparent);
+}
+
+.drawer-title-area {
+  padding: 0 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.drawer-title {
+  font-size: 1.25rem;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+}
+.drawer-category-chip {
+  background: rgba(59,130,246,0.2);
+  color: #60a5fa;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+.open-badge   { color: #34d399; font-size: 0.75rem; font-weight: 600; }
+.closed-badge { color: #f87171; font-size: 0.75rem; font-weight: 600; }
+
+.drawer-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.drawer-tab {
+  flex: 1;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.drawer-tab.active {
+  color: #60a5fa;
+  border-bottom-color: #3b82f6;
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.drawer-info-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.hours-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+}
+
+.drawer-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  color: #e2e8f0;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: background 0.2s;
+  overflow: hidden;
+}
+.drawer-contact-row:hover { background: rgba(255,255,255,0.09); }
+
+.review-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.drawer-actions {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+.btn-directions {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.btn-directions:hover { background: #2563eb; }
+
+.btn-route {
+  flex: 1;
+  padding: 12px;
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-route.added { background: rgba(16,185,129,0.15); border-color: #10b981; color: #34d399; cursor: default; }
+.btn-route:not(.added):hover { background: rgba(255,255,255,0.12); }
+
+/* ── Mobil: Drawer alttan açılır ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hours-toggle {
+    min-height: 48px;
+  }
+
+  .drawer-contact-row {
+    min-height: 52px;
+    padding: 14px !important;
+  }
+
+  .drawer-close-btn,
+  .drawer-fav-btn {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 19;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .place-drawer {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 88dvh;
+    border-left: none;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+    animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 30;
+  }
+
+  @keyframes slideInUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .drawer-photo { height: 180px; }
+  .drawer-title { font-size: 1.1rem; }
+}
+
+/* ── Loading animasyonları ────────────────────────────────────────────── */
+@keyframes scanPulse {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%       { transform: scale(1.15); opacity: 0.7; }
+}
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: translateY(0);    opacity: 0.4; }
+  40%           { transform: translateY(-10px); opacity: 1; }
+}
+
+/* ── GPS Ana Butonu ───────────────────────────────────────────────────── */
+.gps-main-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1.5px solid #10b981;
+  color: #34d399;
+}
+.gps-main-btn:hover { background: rgba(16, 185, 129, 0.2); }
+.gps-main-btn.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: #34d399;
+  color: #fff;
+}
+
+.gps-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #34d399;
+  flex-shrink: 0;
+  animation: gpsPulse 1.4s infinite;
+}
+@keyframes gpsPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
+}
+
+/* ── Kategori Chip Scroll ─────────────────────────────────────────────── */
+.category-chips-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+}
+.category-chips-scroll:active { cursor: grabbing; }
+.category-chips-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+.category-chips-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.category-chips-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+.category-chips-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.category-chip {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #94a3b8;
+}
+.category-chip:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+.category-chip.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(59,130,246,0.4);
+}
+
+/* ── Mobil FAB (Liste / Harita toggle) ───────────────────────────────── */
+.fab-toggle {
+  display: none; /* desktop'ta gizli */
+}
+
+/* ── Genel mobil dokunma iyileştirmeleri ──────────────────────────────── */
+@media (max-width: 768px) {
+  /* ── Global dokunma hedefi minimumu ──────────────────────────────────── */
+  button, a, [role="button"] {
+    min-height: 44px;
+  }
+
+  .location-btn,
+  .drawer-tab,
+  .btn-directions,
+  .btn-route,
+  .gps-main-btn {
+    min-height: 52px;
+  }
+
+  /* Sıralama butonları daha geniş */
+  .sort-btn-group button {
+    min-height: 44px;
+    padding: 10px 8px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Kategori chip'leri daha kolay basılabilir */
+  .category-chip {
+    min-height: 44px;
+    padding: 10px 16px !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* Sekme butonları */
+  .sidebar-tabs button {
+    min-height: 48px;
+    font-size: 0.88rem !important;
+  }
+
+  /* Filtre chip'leri */
+  .filter-chips-row button {
+    min-height: 44px;
+    padding: 8px 14px !important;
+  }
+
+  .bento-card {
+    min-width: 180px !important;
+  }
+
+  /* FAB: sadece mobilde göster */
+  .fab-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 15;
+    padding: 12px 24px;
+    background: #1d4ed8;
+    color: #fff;
+    border: none;
+    border-radius: 28px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(29,78,216,0.6);
+    transition: transform 0.15s, background 0.2s;
+    white-space: nowrap;
+  }
+  .fab-toggle:active { transform: translateX(-50%) scale(0.95); }
+
+  .category-chip {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    min-height: 40px;
+  }
+
+  .gps-main-btn {
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+}

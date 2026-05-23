@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LandingGlobe from './components/LandingGlobe';
 import MapExplorer from './components/MapExplorer';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [appState, setAppState] = useState('landing'); // 'landing' or 'exploring'
@@ -8,85 +9,167 @@ function App() {
   const [targetLocation, setTargetLocation] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [currentCity, setCurrentCity] = useState('');
+  const [fetchError, setFetchError] = useState(null);
+  const [radarAddedCount, setRadarAddedCount] = useState(null);
+
+  // Toast otomatik kapanma
+  useEffect(() => {
+    if (!fetchError) return;
+    const t = setTimeout(() => setFetchError(null), 5000);
+    return () => clearTimeout(t);
+  }, [fetchError]);
+
+  useEffect(() => {
+    if (radarAddedCount === null) return;
+    const t = setTimeout(() => setRadarAddedCount(null), 4000);
+    return () => clearTimeout(t);
+  }, [radarAddedCount]);
+
+  const handleReturnHome = () => {
+    setAppState('landing');
+    setTargetLocation(null);
+    setPlacesData([]);
+    setCurrentCity('');
+  };
 
   const handleStartExploration = async (city) => {
     setScanning(true);
     setCurrentCity(city);
-    
+
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
     try {
       const API_BASE = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${API_BASE}/api/explore`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ city })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city }),
+        signal: controller.signal,
       });
-      
+      clearTimeout(timeoutId);
+
       const data = await response.json();
-      
-      if (data && data.places && data.places.length > 0) {
-        // Sort by final_score descending
+
+      if (data.error) {
+        console.error("Backend Error:", data.error);
+        setScanning(false);
+        setPlacesData([]);
+        setAppState('exploring');
+        setFetchError(`Google API Error: ${data.error}`);
+        return;
+      }
+
+      if (data?.places?.length > 0) {
         const validData = data.places
           .filter(item => item.latitude && item.longitude)
           .sort((a, b) => (b.final_score || 0) - (a.final_score || 0));
         setPlacesData(validData);
         setScanning(false);
         setTargetLocation({ lat: validData[0].latitude, lng: validData[0].longitude });
-        
-        setTimeout(() => {
-          setAppState('exploring');
-        }, 1500);
+        setTimeout(() => setAppState('exploring'), 1500);
       } else {
-        console.warn("No places found from API or error occurred. We could fallback to mock data here if needed.");
         setPlacesData([]);
         setScanning(false);
         setAppState('exploring');
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error("Failed to load live places data:", err);
-      alert("Ağ hatası veya sunucuya ulaşılamadı. Lütfen backend'in çalıştığından emin olun.");
+      const msg = err.name === 'AbortError'
+        ? 'Request timed out (30s). Is the backend running?'
+        : 'Network error — make sure the backend is running.';
+      setFetchError(msg);
       setScanning(false);
       setAppState('exploring');
     }
   };
 
   const handleDeepScan = async (radarCenter) => {
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 30000);
+
     try {
       const API_BASE = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${API_BASE}/api/explore-radius`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ lat: radarCenter.lat, lng: radarCenter.lng, city: currentCity || 'Bölge' })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: radarCenter.lat, lng: radarCenter.lng, city: currentCity || 'Area' }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       const data = await response.json();
-      
+
+      if (data.error) {
+        console.error("Backend Radar Error:", data.error);
+        setFetchError(`Radar Error: ${data.error}`);
+        return;
+      }
+
       const newPlaces = data.places || [];
-      
+
       setPlacesData(prevPlaces => {
-        const _places = [...prevPlaces];
-        let addedCount = 0;
-        newPlaces.forEach(np => {
-          if (!_places.find(p => p.name === np.name)) {
-            _places.push({ ...np, isNewNode: true });
-            addedCount++;
-          }
-        });
-        
-        setTimeout(() => alert(`Radar Taraması Tamamlandı! Seçilen alan etrafında ${addedCount} yeni elit mekan bulundu ve ana listeye eklendi.`), 500);
-        return _places;
+        const existing = new Set(prevPlaces.map(p => p.place_id || p.name));
+        const toAdd = newPlaces.filter(np => !existing.has(np.place_id || np.name));
+        setRadarAddedCount(toAdd.length);
+        return [...prevPlaces, ...toAdd.map(np => ({ ...np, isNewNode: true }))];
       });
-      
+
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error(err);
-      alert("Radar taraması sırasında hata oluştu. Lütfen bağlantınızı kontrol edin.");
+      const msg = err.name === 'AbortError'
+        ? 'Radar scan timed out.'
+        : 'An error occurred during the radar scan.';
+      setFetchError(msg);
     }
   };
 
   return (
     <div className="app-wrapper">
+      {/* Hata toast */}
+      {fetchError && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, background: '#ef4444', color: '#fff', borderRadius: '12px',
+          padding: '12px 20px', fontWeight: 600, fontSize: '0.9rem',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)', maxWidth: 'calc(100vw - 48px)',
+          display: 'flex', alignItems: 'center', gap: '10px'
+        }}>
+          ⚠️ {fetchError}
+          <button onClick={() => setFetchError(null)}
+            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '0 4px', fontSize: '1rem' }}>
+            ✕
+          </button>
+        </div>
+      )}
+      {/* Radar başarı toast */}
+      {radarAddedCount !== null && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, background: '#10b981', color: '#fff', borderRadius: '12px',
+          padding: '12px 20px', fontWeight: 600, fontSize: '0.9rem',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)', maxWidth: 'calc(100vw - 48px)'
+        }}>
+          📡 Radar complete — {radarAddedCount} new places added!
+        </div>
+      )}
+      {/* Tarama yüklenme ekranı */}
+      {scanning && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,15,25,0.85)', backdropFilter: 'blur(16px)' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '20px', animation: 'scanPulse 1.2s ease-in-out infinite' }}>📡</div>
+          <h2 style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem', marginBottom: '8px' }}>
+            Scanning {currentCity}...
+          </h2>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '24px' }}>Searching for premium places</p>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', animation: `dotBounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+            ))}
+          </div>
+        </div>
+      )}
       {/* Container for crossfading between states */}
       
       {/* Map Explorer Layer - Initially hidden or beneath */}
@@ -98,10 +181,14 @@ function App() {
         height: '100%',
         opacity: appState === 'exploring' ? 1 : 0,
         pointerEvents: appState === 'exploring' ? 'auto' : 'none',
-        transition: 'opacity 1.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'opacity 0.6s ease-out',
         zIndex: 1
       }}>
-        {appState === 'exploring' && <MapExplorer places={placesData} onDeepScan={handleDeepScan} />}
+        {appState === 'exploring' && (
+          <ErrorBoundary label="An error occurred while loading the map. Please refresh the page.">
+            <MapExplorer places={placesData} onDeepScan={handleDeepScan} onReturnHome={handleReturnHome} />
+          </ErrorBoundary>
+        )}
       </div>
 
       {/* Landing Layer - Initially visible */}
@@ -116,11 +203,13 @@ function App() {
         transition: 'opacity 1s ease-in-out',
         zIndex: 2
       }}>
-        <LandingGlobe 
-          onExplore={handleStartExploration} 
-          scanning={scanning}
-          targetLocation={targetLocation}
-        />
+        <ErrorBoundary label="Globe failed to load. Your browser may not support WebGL.">
+          <LandingGlobe
+            onExplore={handleStartExploration}
+            scanning={scanning}
+            targetLocation={targetLocation}
+          />
+        </ErrorBoundary>
       </div>
     </div>
   );

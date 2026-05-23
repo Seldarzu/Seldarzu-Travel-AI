@@ -2,12 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web_app</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Seldarzu" />
+
+    <!-- SEO / OG -->
+    <title>Seldarzu Travel AI — Discover America</title>
+    <meta name="description" content="Discover the best restaurants, cafes, parks, and hidden gems across America — powered by AI scoring." />
+    <meta property="og:title" content="Seldarzu Travel AI" />
+    <meta property="og:description" content="Explore premium places across America" />
+    <meta property="og:type" content="website" />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="font-family:sans-serif;text-align:center;padding:48px;color:#334155">
+        <h2>JavaScript Required</h2>
+        <p>Please enable JavaScript in your browser to use Seldarzu Travel AI.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

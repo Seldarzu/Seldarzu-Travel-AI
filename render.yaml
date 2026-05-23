@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: seldarzu-travel-ai
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false          # Render dashboard'dan elle girilir — repo'ya commit edilmez
+      - key: ALLOWED_ORIGINS
+        sync: false          # Frontend URL'ini buraya gir: https://seldarzu.vercel.app
+    healthCheckPath: /api/health
