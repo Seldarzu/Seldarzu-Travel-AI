@@ -7,7 +7,9 @@ services:
     startCommand: python -m uvicorn server:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GOOGLE_MAPS_API_KEY
-        sync: false          # Render dashboard'dan elle girilir — repo'ya commit edilmez
+        sync: false
       - key: ALLOWED_ORIGINS
-        sync: false          # Frontend URL'ini buraya gir: https://seldarzu.vercel.app
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.9
     healthCheckPath: /api/health
