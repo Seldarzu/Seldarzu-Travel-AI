@@ -1,12 +1,8 @@
 [build]
   base    = "web_app"
   command = "npm run build"
-  publish = "web_app/dist"
+  publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "20"
-
-# SPA fallback — tüm route'ları index.html'e yönlendir
 [[redirects]]
   from   = "/*"
   to     = "/index.html"
