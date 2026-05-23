@@ -11,11 +11,26 @@ function App() {
   const [currentCity, setCurrentCity] = useState('');
   const [fetchError, setFetchError] = useState(null);
   const [radarAddedCount, setRadarAddedCount] = useState(null);
+  const [scanElapsed, setScanElapsed] = useState(0); // saniye cinsinden tarama süresi
+
+  // Sayfa açılınca backend'i sessizce uyandır (cold start için)
+  useEffect(() => {
+    const API_BASE = import.meta.env.VITE_API_URL || '';
+    if (!API_BASE) return; // local dev'de gerek yok
+    fetch(`${API_BASE}/api/health`, { method: 'GET' }).catch(() => {});
+  }, []);
+
+  // Tarama süresi sayacı — cold start uyarısı için
+  useEffect(() => {
+    if (!scanning) { setScanElapsed(0); return; }
+    const t = setInterval(() => setScanElapsed(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [scanning]);
 
   // Toast otomatik kapanma
   useEffect(() => {
     if (!fetchError) return;
-    const t = setTimeout(() => setFetchError(null), 5000);
+    const t = setTimeout(() => setFetchError(null), 6000);
     return () => clearTimeout(t);
   }, [fetchError]);
 
@@ -37,7 +52,7 @@ function App() {
     setCurrentCity(city);
 
     const controller = new AbortController();
-    const timeoutId  = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutId  = setTimeout(() => controller.abort(), 90000); // 90s — cold start için
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -77,8 +92,8 @@ function App() {
       clearTimeout(timeoutId);
       console.error("Failed to load live places data:", err);
       const msg = err.name === 'AbortError'
-        ? 'Request timed out (30s). Is the backend running?'
-        : 'Network error — make sure the backend is running.';
+        ? 'Request timed out (90s). The server may be under heavy load — please try again.'
+        : 'Network error — could not reach the server. Please try again.';
       setFetchError(msg);
       setScanning(false);
       setAppState('exploring');
@@ -87,7 +102,7 @@ function App() {
 
   const handleDeepScan = async (radarCenter) => {
     const controller = new AbortController();
-    const timeoutId  = setTimeout(() => controller.abort(), 30000);
+    const timeoutId  = setTimeout(() => controller.abort(), 90000);
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -157,17 +172,52 @@ function App() {
       )}
       {/* Tarama yüklenme ekranı */}
       {scanning && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,15,25,0.85)', backdropFilter: 'blur(16px)' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,15,25,0.88)', backdropFilter: 'blur(16px)' }}>
           <div style={{ fontSize: '3rem', marginBottom: '20px', animation: 'scanPulse 1.2s ease-in-out infinite' }}>📡</div>
           <h2 style={{ color: '#fff', fontWeight: 700, fontSize: '1.4rem', marginBottom: '8px' }}>
             Scanning {currentCity}...
           </h2>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '24px' }}>Searching for premium places</p>
+          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '6px' }}>
+            Searching for premium places
+          </p>
+
+          {/* Cold start uyarısı — 8 saniyeden sonra göster */}
+          <div style={{
+            minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: '20px', padding: '0 16px',
+          }}>
+            {scanElapsed >= 8 && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)',
+                borderRadius: '10px', padding: '10px 16px', maxWidth: '340px',
+                animation: 'fadeIn 0.4s ease',
+              }}>
+                <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🌙</span>
+                <div>
+                  <p style={{ color: '#fbbf24', fontWeight: 600, fontSize: '0.85rem', marginBottom: '3px' }}>
+                    Server is waking up from sleep
+                  </p>
+                  <p style={{ color: '#92400e', fontSize: '0.78rem', lineHeight: 1.5 }}>
+                    The free server sleeps after inactivity. First load may take up to 60 seconds — hang tight!
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: '8px' }}>
             {[0,1,2].map(i => (
               <div key={i} style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6', animation: `dotBounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
             ))}
           </div>
+
+          {/* Geçen süre göstergesi */}
+          {scanElapsed >= 5 && (
+            <p style={{ color: '#334155', fontSize: '0.75rem', marginTop: '16px' }}>
+              {scanElapsed}s elapsed
+            </p>
+          )}
         </div>
       )}
       {/* Container for crossfading between states */}
